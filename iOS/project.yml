@@ -12,13 +12,13 @@ targets:
     type: application
     platform: iOS
     sources:
-      - AirWatch/App
-      - AirWatch/Shared
+    - AirWatch/App
+    - AirWatch/Shared
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.danhess.airwatch
         INFOPLIST_FILE: AirWatch/App/Info.plist
-        GENERATE_INFOPLIST_FILE: NO
+        GENERATE_INFOPLIST_FILE: 'NO'
         CODE_SIGN_ENTITLEMENTS: AirWatch/App/AirWatch.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
       configs:
@@ -29,15 +29,39 @@ targets:
         com.apple.Push:
           enabled: 1
     dependencies:
-      - target: AirWatchWidget
+    - target: AirWatchWidget
+    info:
+      path: AirWatch/App/Info.plist
+      properties:
+        CFBundleDisplayName: AirWatch
+        CFBundleShortVersionString: '0.1'
+        CFBundleVersion: '1'
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+        - UIInterfaceOrientationPortrait
+        - UIInterfaceOrientationPortraitUpsideDown
+        - UIInterfaceOrientationLandscapeLeft
+        - UIInterfaceOrientationLandscapeRight
+        NSLocalNetworkUsageDescription: AirWatch reads aircraft and receiver alerts
+          from your Raspberry Pi.
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+        NSSupportsLiveActivities: true
   AirWatchWidget:
     type: app-extension
     platform: iOS
     sources:
-      - AirWatch/Widget
-      - AirWatch/Shared
+    - AirWatch/Widget
+    - AirWatch/Shared
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.danhess.airwatch.widget
         INFOPLIST_FILE: AirWatch/Widget/Info.plist
-        GENERATE_INFOPLIST_FILE: NO
+        GENERATE_INFOPLIST_FILE: 'NO'
+    info:
+      path: AirWatch/Widget/Info.plist
+      properties:
+        CFBundleShortVersionString: '0.1'
+        CFBundleVersion: '1'
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension

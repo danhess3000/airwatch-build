@@ -49,6 +49,21 @@ jobs:
             -authenticationKeyPath "$key_path" \
             -authenticationKeyID "$ASC_KEY_ID" \
             -authenticationKeyIssuerID "$ASC_ISSUER_ID" archive
+          python3 - <<'PY_PLIST_CHECK'
+          import os, plistlib
+          from pathlib import Path
+          archive = Path(os.environ["RUNNER_TEMP"]) / "AirWatch.xcarchive/Products/Applications/AirWatch.app"
+          with (archive / "Info.plist").open("rb") as f:
+              app = plistlib.load(f)
+          with (archive / "PlugIns/AirWatchWidget.appex/Info.plist").open("rb") as f:
+              widget = plistlib.load(f)
+          expected = {"UIInterfaceOrientationPortrait", "UIInterfaceOrientationPortraitUpsideDown",
+                      "UIInterfaceOrientationLandscapeLeft", "UIInterfaceOrientationLandscapeRight"}
+          assert "UILaunchScreen" in app, "Archived app lacks UILaunchScreen"
+          assert expected.issubset(set(app.get("UISupportedInterfaceOrientations", []))), "Archived app lacks orientations"
+          assert widget.get("NSExtension", {}).get("NSExtensionPointIdentifier") == "com.apple.widgetkit-extension", "Archived widget lacks extension point"
+          print("Archived app and widget Info.plist metadata verified")
+          PY_PLIST_CHECK
           xcodebuild -exportArchive \
             -archivePath "$RUNNER_TEMP/AirWatch.xcarchive" \
             -exportPath "$RUNNER_TEMP/AirWatch-export" \
