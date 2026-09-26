@@ -1,0 +1,24 @@
+name: Compile AirWatch iOS
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'iOS/**'
+      - '.github/workflows/compile.yml'
+jobs:
+  simulator-build:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate project
+        working-directory: iOS
+        run: xcodegen generate
+      - name: Build for iPhone simulator
+        working-directory: iOS
+        run: |
+          xcodebuild -project AirWatch.xcodeproj -scheme AirWatch \
+            -configuration Debug -sdk iphonesimulator \
+            CODE_SIGNING_ALLOWED=NO build
+

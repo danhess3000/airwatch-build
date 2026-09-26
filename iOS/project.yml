@@ -1,0 +1,41 @@
+name: AirWatch
+options:
+  bundleIdPrefix: com.danhess
+  deploymentTarget:
+    iOS: '18.0'
+settings:
+  base:
+    SWIFT_VERSION: '5.0'
+    TARGETED_DEVICE_FAMILY: '1'
+targets:
+  AirWatch:
+    type: application
+    platform: iOS
+    sources:
+      - AirWatch/App
+      - AirWatch/Shared
+    info:
+      path: AirWatch/App/Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.danhess.airwatch
+        INFOPLIST_FILE: AirWatch/App/Info.plist
+        CODE_SIGN_ENTITLEMENTS: AirWatch/App/AirWatch.entitlements
+    attributes:
+      SystemCapabilities:
+        com.apple.Push:
+          enabled: 1
+    dependencies:
+      - target: AirWatchWidget
+  AirWatchWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - AirWatch/Widget
+      - AirWatch/Shared
+    info:
+      path: AirWatch/Widget/Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.danhess.airwatch.widget
+        INFOPLIST_FILE: AirWatch/Widget/Info.plist
