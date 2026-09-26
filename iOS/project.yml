@@ -21,6 +21,10 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.danhess.airwatch
         INFOPLIST_FILE: AirWatch/App/Info.plist
         CODE_SIGN_ENTITLEMENTS: AirWatch/App/AirWatch.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+      configs:
+        Release:
+          CODE_SIGN_ENTITLEMENTS: AirWatch/App/AirWatchRelease.entitlements
     attributes:
       SystemCapabilities:
         com.apple.Push:
