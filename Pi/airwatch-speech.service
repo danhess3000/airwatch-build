@@ -1,0 +1,20 @@
+[Unit]
+Description=AirWatch short-lived spoken notification files
+After=network.target
+
+[Service]
+Type=simple
+User=dhess
+Group=dhess
+ExecStart=/usr/bin/python3 /opt/airwatch/airwatch_speech.py
+Restart=on-failure
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/dhess/.airwatch-private
+Environment=AIRWATCH_SPEECH_CACHE=/home/dhess/.airwatch-private/speech
+
+[Install]
+WantedBy=multi-user.target

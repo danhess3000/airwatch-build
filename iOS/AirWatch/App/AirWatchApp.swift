@@ -70,6 +70,8 @@ struct AirWatchApp: App {
                         Button("Pair push alerts with Pi") { Task { await model.pair() } }
                             .buttonStyle(.bordered)
                         Text(model.pushState).font(.caption)
+                        Text("When locked, spoken push alerts use notification sounds. Enable Sounds for AirWatch and turn Silent Mode off.")
+                            .font(.caption).foregroundStyle(.secondary)
                         Text("Recent transitions").font(.headline)
                         ForEach(model.events.reversed()) { event in
                             VStack(alignment: .leading, spacing: 4) {

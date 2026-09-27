@@ -30,6 +30,7 @@ targets:
           enabled: 1
     dependencies:
     - target: AirWatchWidget
+    - target: AirWatchNotificationService
     # XcodeGen rewrites this plist; keep required metadata in properties below.
     info:
       path: AirWatch/App/Info.plist
@@ -68,3 +69,27 @@ targets:
         CFBundleVersion: '1'
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
+  AirWatchNotificationService:
+    type: app-extension
+    platform: iOS
+    sources:
+    - AirWatch/NotificationService
+    - AirWatch/VoiceSupport
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.danhess.airwatch.speech
+        GENERATE_INFOPLIST_FILE: 'NO'
+        CODE_SIGN_ENTITLEMENTS: AirWatch/NotificationService/NotificationService.entitlements
+        APPLICATION_EXTENSION_API_ONLY: 'YES'
+    info:
+      path: AirWatch/NotificationService/Info.plist
+      properties:
+        CFBundleDisplayName: AirWatch Speech
+        CFBundleShortVersionString: '0.1'
+        CFBundleVersion: '1'
+        NSLocalNetworkUsageDescription: AirWatch downloads spoken alerts from your Raspberry Pi.
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.usernotifications.service
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).NotificationService

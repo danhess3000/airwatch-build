@@ -1,0 +1,16 @@
+name: Test Pi spoken push
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'Pi/**'
+      - '.github/workflows/spoken-push.yml'
+jobs:
+  speech:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install local speech engine
+        run: sudo apt-get update && sudo apt-get install -y espeak-ng
+      - name: Test speech generation and delivery
+        run: python3 -m unittest discover -s Pi -p 'test_*.py' -v

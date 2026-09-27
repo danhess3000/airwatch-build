@@ -14,6 +14,11 @@ jobs:
           printf 'Checked-out commit: %s\n' "$(git rev-parse HEAD)"
           printf 'Workflow commit: %s; ref: %s; run: %s; attempt: %s\n' "$GITHUB_SHA" "$GITHUB_REF" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT"
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Test spoken alert validation
+        run: |
+          python3 -m unittest discover -s Pi -p 'test_*.py' -v
+          swiftc iOS/AirWatch/VoiceSupport/SpokenAlertAudio.swift iOS/Tests/main.swift -o "$RUNNER_TEMP/speech-tests"
+          "$RUNNER_TEMP/speech-tests"
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Generate project
@@ -21,7 +26,7 @@ jobs:
         run: |
           set -euo pipefail
           xcodegen generate
-          plutil -lint AirWatch/App/Info.plist AirWatch/Widget/Info.plist
+          plutil -lint AirWatch/App/Info.plist AirWatch/Widget/Info.plist AirWatch/NotificationService/Info.plist
       - name: Archive and upload to TestFlight
         env:
           ASC_KEY_BASE64: ${{ secrets.ASC_KEY_BASE64 }}
@@ -86,6 +91,26 @@ jobs:
               require(isinstance(display_name, str) and bool(display_name.strip()),
                       f"Archived {label} lacks CFBundleDisplayName")
           print("Archived app and widget Info.plist metadata verified")
+          speech_bundle = archive / "PlugIns/AirWatchNotificationService.appex"
+          with (speech_bundle / "Info.plist").open("rb") as f:
+              speech = plistlib.load(f)
+          require(speech.get("CFBundleIdentifier") == "com.danhess.airwatch.speech", "Wrong speech bundle ID")
+          require(speech.get("CFBundleDisplayName") == "AirWatch Speech", "Speech display name missing")
+          extension = speech.get("NSExtension", {})
+          require(extension.get("NSExtensionPointIdentifier") == "com.apple.usernotifications.service",
+                  "Speech service extension point missing")
+          require(extension.get("NSExtensionPrincipalClass", "").endswith(".NotificationService"),
+                  "Speech extension principal class missing")
+          import subprocess
+          for bundle in (archive, speech_bundle):
+              result = subprocess.run(["codesign", "-d", "--entitlements", ":-", str(bundle)],
+                                      capture_output=True, check=True)
+              entitlements = plistlib.loads(result.stdout)
+              require("group.com.danhess.airwatch" in entitlements.get("com.apple.security.application-groups", []),
+                      "Signed bundle lacks speech App Group: " + bundle.name)
+              if bundle == archive:
+                  require(entitlements.get("aps-environment") == "production", "App must use production APNs")
+          print("Archived speech extension and signed App Group entitlements verified")
           PY_PLIST_CHECK
           xcodebuild -exportArchive \
             -archivePath "$RUNNER_TEMP/AirWatch.xcarchive" \
