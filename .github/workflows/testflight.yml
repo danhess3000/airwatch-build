@@ -81,6 +81,10 @@ jobs:
                   "Archived widget lacks NSExtension:NSExtensionPointIdentifier")
           require(app.get("CFBundleIdentifier") == "com.danhess.airwatch", "Unexpected archived app bundle ID")
           require(widget.get("CFBundleIdentifier") == "com.danhess.airwatch.widget", "Unexpected archived widget bundle ID")
+          for label, metadata in (("app", app), ("widget", widget)):
+              display_name = metadata.get("CFBundleDisplayName")
+              require(isinstance(display_name, str) and bool(display_name.strip()),
+                      f"Archived {label} lacks CFBundleDisplayName")
           print("Archived app and widget Info.plist metadata verified")
           PY_PLIST_CHECK
           xcodebuild -exportArchive \

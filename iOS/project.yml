@@ -63,6 +63,7 @@ targets:
     info:
       path: AirWatch/Widget/Info.plist
       properties:
+        CFBundleDisplayName: AirWatch
         CFBundleShortVersionString: '0.1'
         CFBundleVersion: '1'
         NSExtension:
