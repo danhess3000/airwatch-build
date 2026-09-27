@@ -30,6 +30,7 @@ targets:
           enabled: 1
     dependencies:
     - target: AirWatchWidget
+    # XcodeGen rewrites this plist; keep required metadata in properties below.
     info:
       path: AirWatch/App/Info.plist
       properties:
@@ -58,6 +59,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.danhess.airwatch.widget
         INFOPLIST_FILE: AirWatch/Widget/Info.plist
         GENERATE_INFOPLIST_FILE: 'NO'
+    # XcodeGen rewrites this plist; keep required metadata in properties below.
     info:
       path: AirWatch/Widget/Info.plist
       properties:

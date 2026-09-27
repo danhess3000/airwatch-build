@@ -8,11 +8,20 @@ jobs:
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
+      - name: Identify build revision
+        run: |
+          set -euo pipefail
+          printf 'Checked-out commit: %s\n' "$(git rev-parse HEAD)"
+          printf 'Workflow commit: %s; ref: %s; run: %s; attempt: %s\n' "$GITHUB_SHA" "$GITHUB_REF" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Generate project
         working-directory: iOS
-        run: xcodegen generate
+        run: |
+          set -euo pipefail
+          xcodegen generate
+          plutil -lint AirWatch/App/Info.plist AirWatch/Widget/Info.plist
       - name: Archive and upload to TestFlight
         env:
           ASC_KEY_BASE64: ${{ secrets.ASC_KEY_BASE64 }}
@@ -59,9 +68,19 @@ jobs:
               widget = plistlib.load(f)
           expected = {"UIInterfaceOrientationPortrait", "UIInterfaceOrientationPortraitUpsideDown",
                       "UIInterfaceOrientationLandscapeLeft", "UIInterfaceOrientationLandscapeRight"}
-          assert "UILaunchScreen" in app, "Archived app lacks UILaunchScreen"
-          assert expected.issubset(set(app.get("UISupportedInterfaceOrientations", []))), "Archived app lacks orientations"
-          assert widget.get("NSExtension", {}).get("NSExtensionPointIdentifier") == "com.apple.widgetkit-extension", "Archived widget lacks extension point"
+          def require(condition, message):
+              if not condition:
+                  raise SystemExit(message)
+          require(isinstance(app.get("UILaunchScreen"), dict), "Archived app lacks UILaunchScreen dictionary")
+          orientations = app.get("UISupportedInterfaceOrientations", [])
+          require(isinstance(orientations, list) and expected.issubset(orientations),
+                  "Archived app lacks all four supported orientations")
+          extension = widget.get("NSExtension", {})
+          require(isinstance(extension, dict) and
+                  extension.get("NSExtensionPointIdentifier") == "com.apple.widgetkit-extension",
+                  "Archived widget lacks NSExtension:NSExtensionPointIdentifier")
+          require(app.get("CFBundleIdentifier") == "com.danhess.airwatch", "Unexpected archived app bundle ID")
+          require(widget.get("CFBundleIdentifier") == "com.danhess.airwatch.widget", "Unexpected archived widget bundle ID")
           print("Archived app and widget Info.plist metadata verified")
           PY_PLIST_CHECK
           xcodebuild -exportArchive \
