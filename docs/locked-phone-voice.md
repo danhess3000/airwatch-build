@@ -48,8 +48,8 @@ In Apple Developer Certificates, Identifiers & Profiles:
 4. The widget doesn't need this group. Keep the existing APNs key/topic.
 5. Push the local commit. Compile CI runs Swift tests and the simulator build.
    After signing configuration and compile checks pass, dispatch a NEW TestFlight
-   run on main. The workflow verifies the archived extension metadata, production
-   APNs entitlement, and shared group entitlements in both signed bundles.
+   run on main. The workflow verifies the archived extension metadata, the
+   APNs entitlement, and shared group entitlements in both signed bundles. The archive may use development signing; App Store Connect export re-signs for distribution.
 
 ## Pi preparation (separate canonical repo, review before deployment)
 

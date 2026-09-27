@@ -109,7 +109,11 @@ jobs:
               require("group.com.danhess.airwatch" in entitlements.get("com.apple.security.application-groups", []),
                       "Signed bundle lacks speech App Group: " + bundle.name)
               if bundle == archive:
-                  require(entitlements.get("aps-environment") == "production", "App must use production APNs")
+                  # Automatic signing may archive with a development profile.
+                  # App Store Connect export re-signs for production distribution.
+                  environment = entitlements.get("aps-environment")
+                  require(environment in ("development", "production"), "Archived app lacks APNs entitlement")
+                  print("Archive APNs environment:", environment, "(before distribution export)")
           print("Archived speech extension and signed App Group entitlements verified")
           PY_PLIST_CHECK
           xcodebuild -exportArchive \
