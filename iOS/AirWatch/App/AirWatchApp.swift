@@ -62,6 +62,7 @@ struct AirWatchApp: App {
                                     }
                                 }
                             }
+                            RadarView(status: status)
                         }
                         Button("Test spoken factor and clearance") { model.testAlert() }
                             .buttonStyle(.borderedProminent)
@@ -97,6 +98,98 @@ struct AirWatchApp: App {
                 else { model.stop() }
             }
         }
+    }
+}
+
+private struct RadarView: View {
+    let status: AirWatchStatus
+
+    private var targets: [AirWatchTarget] {
+        (status.interesting ?? []).filter { target in
+            guard let distance = target.distanceMI, let bearing = target.bearing else { return false }
+            return distance >= 0 && distance.isFinite && bearing.isFinite
+        }.sorted { ($0.distanceMI ?? 0) < ($1.distanceMI ?? 0) }
+    }
+
+    private var course: Double? {
+        guard let speed = status.receiver?.speedMPS, speed >= 2.5,
+              let track = status.receiver?.track else { return nil }
+        return track
+    }
+
+    private var range: Double {
+        max(2, ceil((targets.prefix(12).compactMap(\.distanceMI).max() ?? 0) / 2) * 2)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Nearby aircraft").font(.headline)
+                Spacer()
+                Text(course == nil ? "NORTH UP" : "AHEAD UP")
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
+            GeometryReader { geometry in
+                let radius = min(geometry.size.width, geometry.size.height) * 0.43
+                ZStack {
+                    ForEach(1...3, id: \.self) { ring in
+                        Circle().stroke(.secondary.opacity(0.35), lineWidth: 1)
+                            .frame(width: radius * 2 * CGFloat(ring) / 3,
+                                   height: radius * 2 * CGFloat(ring) / 3)
+                    }
+                    Path { path in
+                        path.move(to: CGPoint(x: geometry.size.width / 2, y: geometry.size.height / 2 - radius))
+                        path.addLine(to: CGPoint(x: geometry.size.width / 2, y: geometry.size.height / 2 + radius))
+                        path.move(to: CGPoint(x: geometry.size.width / 2 - radius, y: geometry.size.height / 2))
+                        path.addLine(to: CGPoint(x: geometry.size.width / 2 + radius, y: geometry.size.height / 2))
+                    }.stroke(.secondary.opacity(0.25), lineWidth: 1)
+                    Image(systemName: "location.north.fill")
+                        .foregroundStyle(.blue)
+                    ForEach(Array(targets.prefix(12))) { target in
+                        if let distance = target.distanceMI, let bearing = target.bearing {
+                            let angle = (bearing - (course ?? 0)) * .pi / 180
+                            let offset = radius * CGFloat(min(distance / range, 1))
+                            Circle()
+                                .fill(target.alertable == true ? .red : .cyan)
+                                .frame(width: 12, height: 12)
+                                .overlay(Circle().stroke(.white, lineWidth: 1))
+                                .position(x: geometry.size.width / 2 + CGFloat(sin(angle)) * offset,
+                                          y: geometry.size.height / 2 - CGFloat(cos(angle)) * offset)
+                                .accessibilityLabel(Text("\(target.label), \(distance.formatted(.number.precision(.fractionLength(1)))) miles"))
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .frame(height: 260)
+            HStack {
+                Text("Center: your GPS position")
+                Spacer()
+                Text("Outer ring: \(range.formatted()) mi")
+            }.font(.caption2).foregroundStyle(.secondary)
+            Text("Red: alertable  ·  Blue: other classified aircraft")
+                .font(.caption2).foregroundStyle(.secondary)
+            if targets.isEmpty {
+                Text("No nearby classified aircraft with a current position")
+                    .font(.caption).foregroundStyle(.secondary)
+            } else {
+                ForEach(Array(targets.prefix(3))) { target in
+                    HStack {
+                        Circle().fill(target.alertable == true ? .red : .cyan)
+                            .frame(width: 8, height: 8)
+                        Text(target.label).lineLimit(1)
+                        Spacer()
+                        if let distance = target.distanceMI {
+                            Text("\(distance.formatted(.number.precision(.fractionLength(1)))) mi")
+                        }
+                    }.font(.caption)
+                }
+            }
+            Text("Position updated \(Date(timeIntervalSince1970: status.updated), style: .relative)")
+                .font(.caption2).foregroundStyle(.secondary)
+        }
+        .padding()
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
     }
 }
 
