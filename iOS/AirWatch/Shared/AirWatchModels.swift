@@ -108,11 +108,46 @@ struct AirWatchStatus: Decodable {
     let aircraft1090Count: Int?
     let aircraft978Count: Int?
     let health: [String: HealthComponent]?
+    let receiver: AirWatchReceiver?
+    let interesting: [AirWatchTarget]?
 
     enum CodingKeys: String, CodingKey {
-        case updated, status, health
+        case updated, status, health, receiver, interesting
         case aircraft1090Count = "aircraft_1090_count"
         case aircraft978Count = "aircraft_978_count"
+    }
+}
+
+struct AirWatchReceiver: Decodable {
+    let track: Double?
+    let speedMPS: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case track
+        case speedMPS = "speed_mps"
+    }
+}
+
+struct AirWatchTarget: Decodable, Identifiable {
+    let hex: String
+    let registration: String?
+    let flight: String?
+    let agency: String?
+    let distanceMI: Double?
+    let bearing: Double?
+    let altitudeFT: Double?
+    let alertable: Bool?
+
+    var id: String { hex }
+    var label: String {
+        [registration, flight, hex.uppercased()]
+            .compactMap { $0?.isEmpty == false ? $0 : nil }.first ?? "Aircraft"
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case hex, registration, flight, agency, bearing, alertable
+        case distanceMI = "distance_mi"
+        case altitudeFT = "altitude_ft"
     }
 }
 
