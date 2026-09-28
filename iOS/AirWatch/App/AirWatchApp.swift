@@ -65,6 +65,11 @@ struct AirWatchApp: App {
                         }
                         Button("Test spoken factor and clearance") { model.testAlert() }
                             .buttonStyle(.borderedProminent)
+                        Button("Dismiss current alert") { model.dismissCurrentAlert() }
+                            .buttonStyle(.bordered)
+                            .disabled(!model.hasLiveActivity)
+                        Text(model.liveActivityState)
+                            .font(.caption).foregroundStyle(.secondary)
                         SecureField("Pi pairing code", text: $model.pairingCode)
                             .textContentType(.password)
                         Button("Pair push alerts with Pi") { Task { await model.pair() } }
@@ -102,6 +107,8 @@ final class AirWatchModel: ObservableObject {
     @Published var events: [AirWatchEvent] = []
     @Published var pairingCode = UserDefaults.standard.string(forKey: "AirWatchPairingCode") ?? ""
     @Published var pushState = "Awaiting Apple push registration"
+    @Published var hasLiveActivity = false
+    @Published var liveActivityState = "No active Live Activity"
 
     private let base = URL(string: "http://172.20.10.2:8099")!
     private var monitorTask: Task<Void, Never>?
@@ -110,12 +117,15 @@ final class AirWatchModel: ObservableObject {
     private let voice = VoiceAlerts()
     private var liveActivity: Activity<AirWatchAttributes>?
     private var lastLiveState: AirWatchAttributes.ContentState?
+    private var activityRevision = 0
     private var deviceToken: String?
     private var activityToken: String?
     private var tokenObserver: NSObjectProtocol?
 
     init() {
         liveActivity = Activity<AirWatchAttributes>.activities.first
+        hasLiveActivity = liveActivity != nil
+        if hasLiveActivity { liveActivityState = "Live Activity active" }
         tokenObserver = NotificationCenter.default.addObserver(
             forName: .airWatchDeviceToken, object: nil, queue: .main
         ) { [weak self] note in
@@ -190,6 +200,22 @@ final class AirWatchModel: ObservableObject {
                            detail: "2 o’clock · 1.2 mi · 900 ft · closing", fault: false)
     }
 
+    func dismissCurrentAlert() {
+        guard hasLiveActivity else { return }
+        let activities = Activity<AirWatchAttributes>.activities
+        activityRevision += 1
+        lastLiveState = nil
+        liveActivity = nil
+        activityToken = nil
+        hasLiveActivity = false
+        liveActivityState = "Dismissed. A new Live Activity starts with the next event while AirWatch is open."
+        Task {
+            for activity in activities {
+                await activity.end(nil, dismissalPolicy: .immediate)
+            }
+        }
+    }
+
     private func updateLiveActivity(_ event: AirWatchEvent) {
         updateLiveActivity(headline: event.headline, detail: event.detailLine,
                            fault: event.eventType == "health_fault")
@@ -202,11 +228,13 @@ final class AirWatchModel: ObservableObject {
         )
         guard state != lastLiveState else { return }
         lastLiveState = state
+        let revision = activityRevision
         let content = ActivityContent(
             state: state,
             staleDate: Date().addingTimeInterval(120)
         )
         Task {
+            guard revision == activityRevision else { return }
             if let liveActivity {
                 await liveActivity.update(content)
             } else {
@@ -215,6 +243,8 @@ final class AirWatchModel: ObservableObject {
                     pushType: .token
                 )
                 if let activity = liveActivity {
+                    hasLiveActivity = true
+                    liveActivityState = "Live Activity active"
                     observePushToken(activity)
                 }
             }
@@ -224,10 +254,12 @@ final class AirWatchModel: ObservableObject {
     private func observePushToken(_ activity: Activity<AirWatchAttributes>) {
         Task {
             if let token = activity.pushToken {
+                guard liveActivity?.id == activity.id else { return }
                 activityToken = token.map { String(format: "%02x", $0) }.joined()
                 await sendTokens()
             }
             for await token in activity.pushTokenUpdates {
+                guard liveActivity?.id == activity.id else { return }
                 activityToken = token.map { String(format: "%02x", $0) }.joined()
                 await sendTokens()
             }
